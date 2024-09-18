@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Futurista</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3c72">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: radial-gradient(circle at top left, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .calculator {
+            background: linear-gradient(145deg, #3e4c6d, #1e2845);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.3);
+            width: 400px;
+        }
+        .display {
+            width: 100%;
+            height: 100px;
+            background-color: #12192d;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 3rem;
+            text-align: right;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: inset 0px 5px 10px rgba(255, 255, 255, 0.1);
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .buttons button {
+            height: 70px;
+            border-radius: 15px;
+            color: #000;
+            font-size: 1.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .buttons button:hover {
+            background: #00c6ff;
+            color: #fff;
+            transform: scale(1.05);
+        }
+        .buttons button:active {
+            background: #0072ff;
+        }
+        .buttons button.number {
+            background-color: #4caf50;
+        }
+        .buttons button.operator {
+            background-color: #ff9800;
+        }
+        .buttons button.equals {
+            background-color: #e1bee7;
+            grid-column: span 2;
+        }
+        .buttons button.special {
+            background-color: #ffeb3b;
+        }
+        .buttons button.export, .buttons button.view-data {
+            background-color: #4caf50;
+            grid-column: span 2;
+            color: #fff;
+            font-weight: bold;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 15px;
+        }
+        .modal-button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            background-color: #4caf50;
+            color: white;
+        }
+        .modal-button:hover {
+            opacity: 0.8;
+        }
+        #dataForm {
+            display: none;
+            position: fixed;
+            z-index: 2;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        #dataForm form {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 15px;
+        }
+        #dataForm input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        #dataForm button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            background-color: #4caf50;
+            color: white;
+        }
+        #storedData {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display" id="display">0</div>
+        <div class="buttons">
+            <button onclick="clearDisplay()">C</button>
+            <button onclick="deleteChar()">DEL</button>
+            <button onclick="appendToDisplay('÷')" class="operator">÷</button>
+            <button onclick="appendToDisplay('×')" class="operator">×</button>
+            <button onclick="appendToDisplay('7')" class="number">7</button>
+            <button onclick="appendToDisplay('8')" class="number">8</button>
+            <button onclick="appendToDisplay('9')" class="number">9</button>
+            <button onclick="appendToDisplay('-')" class="operator">-</button>
+            <button onclick="appendToDisplay('4')" class="number">4</button>
+            <button onclick="appendToDisplay('5')" class="number">5</button>
+            <button onclick="appendToDisplay('6')" class="number">6</button>
+            <button onclick="appendToDisplay('+')" class="operator">+</button>
+            <button onclick="appendToDisplay('1')" class="number">1</button>
+            <button onclick="appendToDisplay('2')" class="number">2</button>
+            <button onclick="appendToDisplay('3')" class="number">3</button>
+            <button onclick="calculate()" class="equals">=</button>
+            <button onclick="appendToDisplay('0')" class="number">0</button>
+            <button onclick="appendToDisplay('.')" class="number">.</button>
+            <button onclick="addIVA()" class="special">+IVA</button>
+            <button onclick="removeIVA()" class="special">-IVA</button>
+            <button onclick="showExportOptions()" class="export">Exportar</button>
+            <button onclick="showViewDataOptions()" class="view-data">Ver Datos</button>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <h2>Exportar Datos</h2>
+            <button class="modal-button" onclick="showDataForm('txt')">Exportar como TXT</button>
+            <button class="modal-button" onclick="showDataForm('xlsx')">Exportar como XLSX</button>
+            <button class="modal-button" onclick="showDataForm('rtf')">Exportar como RTF</button>
+            <button class="modal-button" onclick="showDataForm('localStorage')">Guardar en localStorage</button>
+        </div>
+    </div>
+
+    <div id="viewDataModal" class="modal">
+        <div class="modal-content">
+            <h2>Ver y Exportar Datos Almacenados</h2>
+            <button class="modal-button" onclick="viewStoredData()">Ver Datos Almacenados</button>
+            <button class="modal-button" onclick="exportStoredData('txt')">Exportar Datos como TXT</button>
+            <button class="modal-button" onclick="exportStoredData('xlsx')">Exportar Datos como XLSX</button>
+            <button class="modal-button" onclick="exportStoredData('rtf')">Exportar Datos como RTF</button>
+            <div id="storedData"></div>
+        </div>
+    </div>
+
+    <div id="dataForm">
+        <form onsubmit="handleFormSubmit(event)">
+            <input type="text" id="nombre" placeholder="Nombre y apellidos" required>
+            <input type="text" id="direccion" placeholder="Dirección" required>
+            <input type="tel" id="telefono" placeholder="Teléfono" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="text" id="producto" placeholder="Producto ofertado" required>
+            <input type="text" id="servicios" placeholder="Servicios adicionales">
+            <input type="text" id="otros" placeholder="Otros datos">
+            <input type="hidden" id="exportFormat">
+            <button type="submit">Exportar</button>
+        </form>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const display = document.getElementById('display');
+        const exportModal = document.getElementById('exportModal');
+        const viewDataModal = document.getElementById('viewDataModal');
+        const dataForm = document.getElementById('dataForm');
+        const exportFormat = document.getElementById('exportFormat');
+        const storedDataDiv = document.getElementById('storedData');
+
+        window.appendToDisplay = function(value) {
+            if (display.innerHTML === '0' && value !== '.') {
+                display.innerHTML = value;
+            } else {
+                display.innerHTML += value;
+            }
+        }
+        window.clearDisplay = function() {
+            display.innerHTML = '0';
+        }
+        window.deleteChar = function() {
+            if (display.innerHTML.length > 1) {
+                display.innerHTML = display.innerHTML.slice(0, -1);
+            } else {
+                display.innerHTML = '0';
+            }
+        }
+        window.calculate = function() {
+            try {
+                display.innerHTML = eval(display.innerHTML.replace('÷', '/').replace('×', '*')).toFixed(2);
+            } catch {
+                display.innerHTML = 'Error';
+            }
+        }
+        window.addIVA = function() {
+            let value = parseFloat(display.innerHTML);
+            if (!isNaN(value)) {
+                value += value * 0.21;
+                display.innerHTML = value.toFixed(2);
+            }
+        }
+        window.removeIVA = function() {
+            let value = parseFloat(display.innerHTML);
+            if (!isNaN(value)) {
+                value /= 1.21;
+                display.innerHTML = value.toFixed(2);
+            }
+        }
+        window.showExportOptions = function() {
+            exportModal.style.display = "block";
+        }
+        window.showViewDataOptions = function() {
+            viewDataModal.style.display = "block";
+        }
+        window.showDataForm = function(format) {
+            exportModal.style.display = "none";
+            dataForm.style.display = "block";
+            exportFormat.value = format;
+        }
+        window.onclick = function(event) {
+            if (event.target == exportModal) {
+                exportModal.style.display = "none";
+            }
+            if (event.target == viewDataModal) {
+                viewDataModal.style.display = "none";
+            }
+            if (event.target == dataForm) {
+                dataForm.style.display = "none";
+            }
+        }
+        window.handleFormSubmit = function(event) {
+            event.preventDefault();
+            let formData = {
+                nombre: document.getElementById('nombre').value,
+                direccion: document.getElementById('direccion').value,
+                telefono: document.getElementById('telefono').value,
+                email: document.getElementById('email').value,
+                producto: document.getElementById('producto').value,
+                servicios: document.getElementById('servicios').value,
+                otros: document.getElementById('otros').value,
+                ofertaTotal: display.innerHTML + " €"
+            };
+
+            let format = exportFormat.value;
+            
+            switch(format) {
+                case 'txt':
+                    exportTXT(formData);
+                    break;
+                case 'xlsx':
+                    exportXLSX(formData);
+                    break;
+                case 'rtf':
+                    exportRTF(formData);
+                    break;
+                case 'localStorage':
+                    saveToLocalStorage(formData);
+                    break;
+            }
+            dataForm.style.display = "none";
+        }
+        function formatData(data) {
+            return `NOMBRE Y APELLIDOS CLIENTE: ${data.nombre}
+    DIRECCIÓN: ${data.direccion}
+    TELÉFONO: ${data.telefono}
+    EMAIL: ${data.email}
+    PRODUCTO OFERTADO: ${data.producto}
+    SERVICIOS ADICIONALES: ${data.servicios}
+    OTROS DATOS: ${data.otros}
+    OFERTA TOTAL: ${data.ofertaTotal}`;
+        }
+        function formatStoredData(data) {
+            return data.split('\n\n__________________________________________________\n\n')
+                .map(entry => entry.trim())
+                .join('\n\n__________________________________________________\n\n');
+        }
+        function exportTXT(data) {
+            let formattedData = typeof data === 'string' ? formatStoredData(data) : formatData(data);
+            let blob = new Blob([formattedData], { type: "text/plain" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "export.txt";
+            link.click();
+        }
+        function exportXLSX(data) {
+            let rows;
+            if (typeof data === 'string') {
+                rows = data.split('\n\n__________________________________________________\n\n')
+                    .map(entry => entry.split('\n').map(line => line.split(': ')[1]));
+rows.unshift(['NOMBRE Y APELLIDOS CLIENTE', 'DIRECCIÓN', 'TELÉFONO', 'EMAIL', 'PRODUCTO OFERTADO', 'SERVICIOS ADICIONALES', 'OTROS DATOS', 'OFERTA TOTAL']);
+            } else {
+                rows = [
+                    ['NOMBRE Y APELLIDOS CLIENTE', 'DIRECCIÓN', 'TELÉFONO', 'EMAIL', 'PRODUCTO OFERTADO', 'SERVICIOS ADICIONALES', 'OTROS DATOS', 'OFERTA TOTAL'],
+                    [data.nombre, data.direccion, data.telefono, data.email, data.producto, data.servicios, data.otros, data.ofertaTotal]
+                ];
+            }
+            let ws = XLSX.utils.aoa_to_sheet(rows);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Calculadora");
+            XLSX.writeFile(wb, "export.xlsx");
+        }
+        function exportRTF(data) {
+            let rtfHeader = "{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}\n";
+            let rtfFooter = "}";
+            let rtfContent = typeof data === 'string' ? formatStoredData(data) : formatData(data);
+            rtfContent = rtfContent.replace(/\n/g, "\\par\n");
+            let rtfData = rtfHeader + rtfContent + rtfFooter;
+            
+            let blob = new Blob([rtfData], {type: "application/rtf"});
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "export.rtf";
+            link.click();
+        }
+        function saveToLocalStorage(data) {
+            let storedData = localStorage.getItem('calculadoraData') || '';
+            let newData = formatData(data);
+            
+            if (storedData) {
+                storedData += '\n\n__________________________________________________\n\n';
+            }
+            
+            storedData += newData;
+            localStorage.setItem('calculadoraData', storedData);
+            alert('Datos guardados en localStorage');
+        }
+        window.viewStoredData = function() {
+            let storedData = localStorage.getItem('calculadoraData') || 'No hay datos almacenados';
+            storedDataDiv.innerHTML = storedData.replace(/\n/g, '<br>');
+        }
+        window.exportStoredData = function(format) {
+            let storedData = localStorage.getItem('calculadoraData') || 'No hay datos almacenados';
+            
+            switch(format) {
+                case 'txt':
+                    exportTXT(storedData);
+                    break;
+                case 'xlsx':
+                    exportXLSX(storedData);
+                    break;
+                case 'rtf':
+                    exportRTF(storedData);
+                    break;
+            }
+        }
+    });
+
+    // Registro del Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+    </script>
+</body>
+</html>
